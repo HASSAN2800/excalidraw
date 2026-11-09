@@ -7,6 +7,83 @@ import {
 import { API } from "./tests/helpers/api";
 
 describe("serializeAsClipboardJSON()", () => {
+  it("removes singleton groups from a container and its bound label", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      id: "container",
+      groupIds: ["group"],
+      boundElements: [{ type: "text", id: "label" }],
+    });
+    const label = API.createElement({
+      type: "text",
+      id: "label",
+      text: "Label",
+      containerId: rectangle.id,
+      groupIds: ["group"],
+    });
+    const { elements } = JSON.parse(
+      serializeAsClipboardJSON({ elements: [rectangle, label], files: null }),
+    );
+
+    expect(
+      elements.map((element: { groupIds: string[] }) => element.groupIds),
+    ).toEqual([[], []]);
+    expect(elements[0].boundElements).toEqual(rectangle.boundElements);
+    expect(elements[1].containerId).toBe(rectangle.id);
+    expect(rectangle.groupIds).toEqual(["group"]);
+    expect(label.groupIds).toEqual(["group"]);
+  });
+
+  it("preserves a shared outer group while removing a labeled singleton inner group", () => {
+    const rectangle = API.createElement({
+      type: "rectangle",
+      id: "container",
+      groupIds: ["inner", "outer"],
+      boundElements: [{ type: "text", id: "label" }],
+    });
+    const label = API.createElement({
+      type: "text",
+      id: "label",
+      text: "Label",
+      containerId: rectangle.id,
+      groupIds: ["inner", "outer"],
+    });
+    const ellipse = API.createElement({
+      type: "ellipse",
+      groupIds: ["outer"],
+    });
+    const { elements } = JSON.parse(
+      serializeAsClipboardJSON({
+        elements: [rectangle, label, ellipse],
+        files: null,
+      }),
+    );
+
+    expect(
+      elements.map((element: { groupIds: string[] }) => element.groupIds),
+    ).toEqual([["outer"], ["outer"], ["outer"]]);
+  });
+
+  it("counts a label independently when its container is not copied", () => {
+    const label = API.createElement({
+      type: "text",
+      text: "Label",
+      containerId: "uncopied-container",
+      groupIds: ["group"],
+    });
+    const ellipse = API.createElement({
+      type: "ellipse",
+      groupIds: ["group"],
+    });
+    const { elements } = JSON.parse(
+      serializeAsClipboardJSON({ elements: [label, ellipse], files: null }),
+    );
+
+    expect(
+      elements.map((element: { groupIds: string[] }) => element.groupIds),
+    ).toEqual([["group"], ["group"]]);
+  });
+
   it("removes singleton groups without changing the original element", () => {
     const rectangle = API.createElement({
       type: "rectangle",
