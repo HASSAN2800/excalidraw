@@ -11,6 +11,7 @@ import {
 import { mutateElement } from "@excalidraw/element";
 import { deepCopyElement } from "@excalidraw/element";
 import {
+  isBoundToContainer,
   isFrameLikeElement,
   isInitializedImageElement,
 } from "@excalidraw/element";
@@ -151,6 +152,14 @@ export const serializeAsClipboardJSON = ({
   const groupSizes = new Map<string, number>();
   for (const element of elements) {
     for (const groupId of element.groupIds) {
+      // A bound label is part of its container, not another group member.
+      // Count it independently when its container isn't copied in this group.
+      if (
+        isBoundToContainer(element) &&
+        elementsMap.get(element.containerId)?.groupIds.includes(groupId)
+      ) {
+        continue;
+      }
       groupSizes.set(groupId, (groupSizes.get(groupId) ?? 0) + 1);
     }
   }

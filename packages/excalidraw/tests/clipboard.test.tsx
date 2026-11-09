@@ -867,6 +867,36 @@ describe("copy and cut events", () => {
     return clipboardData;
   };
 
+  it("copies and pastes a labeled group member without a redundant group", async () => {
+    const [rectangle, label] = API.createTextContainer({ groupIds: ["group"] });
+    const ellipse = API.createElement({ type: "ellipse", groupIds: ["group"] });
+    API.setElements([rectangle, label, ellipse]);
+    API.setSelectedElements([rectangle]);
+
+    const copied = dispatchClipboardEvent("copy");
+    await waitFor(() => {
+      expect(copied.getData("text/plain")).not.toBe("");
+    });
+    pasteWithCtrlCmdV(copied.getData("text/plain"));
+
+    await waitFor(() => {
+      expect(h.elements).toHaveLength(5);
+    });
+    const pastedContainer = h.elements[3];
+    const pastedLabel = h.elements[4] as ExcalidrawTextElement;
+    expect(pastedContainer.groupIds).toEqual([]);
+    expect(pastedLabel.groupIds).toEqual([]);
+    expect(pastedLabel.containerId).toBe(pastedContainer.id);
+    expect(pastedContainer.boundElements).toEqual([
+      { type: "text", id: pastedLabel.id },
+    ]);
+    expect(h.elements.slice(0, 3).map((element) => element.groupIds)).toEqual([
+      ["group"],
+      ["group"],
+      ["group"],
+    ]);
+  });
+
   it("should copy the selection on a copy event, and cut it on a cut event", async () => {
     const rectangle = API.createElement({ type: "rectangle" });
     API.setElements([rectangle]);
